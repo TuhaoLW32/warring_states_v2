@@ -28,9 +28,13 @@
   .title{font-size:30px; line-height:1;}
   .title .seal{display:inline-block; background:var(--seal); color:#f5e9d8; font-size:12px;
     padding:3px 8px; margin-left:10px; vertical-align:middle; letter-spacing:.3em; transform:translateY(-3px);}
-  .meta{display:flex; gap:22px; font-size:13px; color:var(--muted);}
+  .meta{display:flex; gap:22px; font-size:13px; color:var(--muted); align-items:center;}
   .meta b{color:var(--gold); font-size:18px;}
   #weatherName{color:var(--ink);}
+  .sndBtn{background:none; border:1px solid var(--line); color:var(--ink); padding:4px 11px;
+    cursor:pointer; font-family:inherit; font-size:11px; letter-spacing:.08em; transition:all .18s;}
+  .sndBtn:hover{border-color:var(--gold); color:var(--gold);}
+  .sndBtn.off{opacity:.45; text-decoration:line-through;}
   #legend{display:flex; flex-wrap:wrap; gap:10px; margin-bottom:10px; font-size:11px; color:var(--muted); align-items:center;}
   .lg{display:flex; align-items:center; gap:4px;}
   .sw{width:13px; height:13px; border:1px solid rgba(255,255,255,.18);}
@@ -39,6 +43,11 @@
   #map{display:block; width:100%; cursor:pointer;}
   #mapTip{position:absolute; left:10px; top:8px; font-size:11px; color:var(--muted);
     background:rgba(14,17,22,.75); padding:5px 9px; pointer-events:none; letter-spacing:.06em;}
+  #zoomBar{position:absolute; right:10px; bottom:10px; display:flex; gap:6px; z-index:15;}
+  .zbtn{width:34px; height:34px; background:rgba(18,21,27,.9); border:1px solid var(--line);
+    color:var(--ink); font-size:15px; cursor:pointer; font-family:inherit; transition:all .18s;}
+  .zbtn:hover{border-color:var(--gold); color:var(--gold);}
+  .zbtn.wide{width:auto; padding:0 11px; font-size:11px; letter-spacing:.1em;}
   #tooltip{position:absolute; pointer-events:none; background:rgba(18,21,27,.94); border:1px solid var(--gold);
     padding:8px 11px; font-size:12px; line-height:1.8; display:none; z-index:20; max-width:230px;}
   aside{display:flex; flex-direction:column; gap:11px;}
@@ -129,15 +138,24 @@
     <div>回合 <b id="turnNum">1</b></div>
     <div>天气 <b id="weatherName">晴朗</b></div>
     <div id="weatherDesc" style="max-width:250px; line-height:1.6;"></div>
+    <button class="sndBtn" id="bgmBtn" title="背景音乐（同目录 bgm.mp3）">♪ 音乐：开</button>
+    <button class="sndBtn" id="sfxBtn" title="游戏音效（战鼓/夺城/劫掠等）">♪ 音效：开</button>
   </div>
 </header>
+
+<audio id="bgmEl" src="bgm.mp3" loop preload="auto"></audio>
 
 <div id="legend"></div>
 
 <main>
   <div id="mapWrap">
     <canvas id="map"></canvas>
-    <div id="mapTip">悬停查看地块详情 · 点击地图选定目标城池</div>
+    <div id="mapTip">悬停查看地块详情 · 点击地图选定目标城池 · 滚轮缩放 · 拖拽平移</div>
+    <div id="zoomBar">
+      <button class="zbtn" id="zoomInBtn" title="放大（或按 + 键）">＋</button>
+      <button class="zbtn" id="zoomOutBtn" title="缩小（或按 - 键）">－</button>
+      <button class="zbtn wide" id="zoomResetBtn" title="复位全图（或按 0 键）">复位</button>
+    </div>
     <div id="tooltip"></div>
   </div>
 
@@ -232,7 +250,7 @@
     <h2>《烽火列国》</h2>
     <div class="sub">七雄并立，逐鹿天下。城-郡制沙盘：一座城统辖周边郡地，城陷则郡失。<br>
     郡县按地块产出钱粮，军队每日耗费粮饷；山河地利皆影响攻守，渡口可免跨河之险。<br>
-    <b style="color:#d4a942">蛮夷（匈奴/戎狄/百越）</b>：劫掠为生、不事农商；杀伤有限但掠夺丰厚，AI 蛮夷攻城只劫掠不占领，七国亦不可占其地，只能击退使其 3 回合不得犯边。<br>
+    <b style="color:#d4a942">蛮夷（匈奴/戎狄/百越）</b>：劫掠为生、不事农商；杀伤有限但掠夺丰厚，AI 蛮夷攻城只劫掠不占领。人机不可占蛮夷之地（唯玩家可攻下），击退仅使其 3 回合不得犯边。<br>
     <b style="color:#d4a942">招降之制</b>：天下仅剩两国争雄时，一方多出 4 城且连续保持 10 回合，对方便须举国请降。</div>
     <h4>选择模式</h4>
     <div class="choices" id="modeChips">
@@ -338,7 +356,7 @@
       <tr><td>征兵</td><td>15金25粮</td><td>兵力+35（蛮夷半价：8金12粮）</td></tr>
       <tr><td>屯田</td><td>—</td><td>粮草+45</td></tr>
       <tr><td>兴商</td><td>—</td><td>金钱+30</td></tr>
-      <tr><td>进攻</td><td>—</td><td>攻打接壤敌城，胜则夺城</td></tr>
+      <tr><td>进攻</td><td>—</td><td>攻打接壤敌城，胜则夺城一座（终局决战+1）</td></tr>
       <tr><td>会战</td><td>50金50粮</td><td>士气≥60、兵力≥150方可；胜则夺1~2城，士气不足则未战先溃、八成溃散</td></tr>
       <tr><td>防守</td><td>—</td><td>防御大增、士气+5</td></tr>
       <tr><td>离间</td><td>20金</td><td>敌城士气-15（不限接壤），小概率收买内应降其城防</td></tr>
@@ -364,8 +382,8 @@
     <div class="kv">
       <b>个性</b>：匈奴「骑射无双」攻方战损-15%；戎狄「悍不畏死」多杀伤15%；百越「丛林之王」丘陵山地防守额外+15%。<br>
       <b>共通</b>：劫掠为生（掠夺丰厚，掠金又掠粮）；不事农商（粮金产出-50%）；全民皆兵（征兵半价）；补给线长（维护费×1.5）；不修筑城；熟悉地形（防守+15%）。<br>
-      <b>AI 蛮夷</b>：杀伤有限、掠夺丰厚，攻城只劫掠不占领；被七国击退则 3 回合不敢犯边。七国亦不可占其地——<b>只能制约，不能征服</b>。<br>
-      <b>玩家蛮夷</b>：可真正攻城略地、横扫中原（七国也能攻下你的地盘）。<b>据六城</b>可脱「不事农商」之累（产出恢复），缩回<b>三城</b>则复归旧习。<br>
+      <b>AI 蛮夷</b>：杀伤有限、掠夺丰厚，攻城只劫掠不占领；被击退则 3 回合不敢犯边。<b>唯玩家可攻下蛮夷城池</b>，人机只能制约、不能征服。<br>
+      <b>玩家蛮夷</b>：可真正攻城略地、横扫中原（七国与AI蛮夷的地盘皆可攻下；AI 蛮夷掠夺不占城）。<b>据六城</b>可脱「不事农商」之累（产出恢复），缩回<b>三城</b>则复归旧习。<br>
       <b>开局两模式</b>：「6 国对手·战国七雄（无蛮夷，蛮夷村庄尽除）」与「9 国对手·天下大乱（含蛮夷）」。
     </div>
 
@@ -379,6 +397,8 @@
     <h4>七、小贴士</h4>
     <div class="kv">
       · 悬停地块查看归属、地形与产出；点击地图即选定目标城池。<br>
+      · <b>地图缩放</b>：滚轮或 <b>+ / -</b> 键放大缩小（以指针为中心），<b>拖拽</b>画面或方向键平移视野，按 <b>0</b> 或右下角「复位」还原全图。<br>
+      · <b>音乐与音效</b>：背景音乐取自同目录 <b>bgm.mp3</b>，首次点击后自动奏响，右上角「♪ 音乐」随时开关；战鼓、夺城、劫掠、火攻等音效由代码实时合成，「♪ 音效」可单独关闭。<br>
       · 「自动补令」一键排满军令，「国史」逐回合记载你的兴亡。<br>
       · 编辑器可自建天下：划归、改地形、建城、绘河、建桥，导出配置永久保存。<br>
       · 蛮夷虽富于掠夺，却短于农商——宜速战速决，久战必贫。
@@ -503,7 +523,7 @@ const HAN_STRONG_TROOPS=150, HAN_STRONG_CITIES=4;
 const FORT_DEF_PER_LEVEL=0.07, FORT_LOSS_PER_LEVEL=0.05, FORT_CAPTURE_PER_LEVEL=0.12, FORT_MAX=5;
 const SABOTAGE_FORT_CHANCE=0.05, ATTACK_LOSS_RATE=0.30, DEFEND_LOSS_RATE=0.45;
 const BATTLE_TIERS=[
-  [2.0,0.7,1.2,2,40,12,'大胜'],[1.4,2.0,1.0,1,25,4,'惨胜'],[1.1,1.0,1.0,1,20,6,'小胜'],
+  [2.0,0.7,1.2,1,40,12,'大胜'],[1.4,2.0,1.0,1,25,4,'惨胜'],[1.1,1.0,1.0,1,20,6,'小胜'],
   [0.9,1.0,1.0,0,0,0,'平手'],[0.0,1.3,0.8,0,0,0,'惨败'],
 ];
 const ERA_TURN=30, ERA_STEP=10, ERA_CUT_PER_STEP=0.05, ERA_MAX_CUT=0.50;
@@ -520,7 +540,7 @@ const GRUDGE_TURNS=4, BARB_BEATEN_COOLDOWN=3, ENDGAME_CONTENDERS=3;
 /* ================================================================
    状态
    ================================================================ */
-const S={nations:[],me:null,turn:1,weather:WEATHERS[0],aiMult:1,aiBonus:0,mode:'play',speed:2,paused:false,over:false,busy:false,duelReported:false,history:{},logFilter:'全部',precise:false,aiOrderCount:3,editorMapReady:false};
+const S={nations:[],me:null,turn:1,weather:WEATHERS[0],aiMult:1,aiBonus:0,mode:'play',speed:2,paused:false,over:false,busy:false,duelReported:false,history:{},logFilter:'全部',precise:false,aiOrderCount:3,editorMapReady:false,bgmOn:true,sfxOn:true};
 S.endgameLead={key:null,turns:0};
 const UI={slots:[],pending:null};
 const E={tool:'assign',paint:'plain',nation:'秦',src:null,undo:[]};
@@ -528,6 +548,70 @@ let tiles=new Map(), CITIES=[], HEX=26, hoverCity=null;
 let riverEdgeSet=new Set(), riverOwner=new Map(), riverPolylines=[];
 let bridgeEdgeSet=new Set(), bridges=[], battleMarks=[];
 let mapOx=0, mapOy=0;
+/* 视图：缩放与平移 */
+let ZOOM=1, panX=0, panY=0;
+const MINZ=0.5, MAXZ=4;
+
+/* ================================================================
+   音频：BGM（本地 bgm.mp3）+ 音效（Web Audio 合成）
+   ================================================================ */
+let actx=null, lastSfxAt=0;
+function ensureAudio(){
+  if(!actx){ try{ actx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ return null; } }
+  if(actx.state==='suspended')actx.resume();
+  return actx;
+}
+function tone(freq,dur,type,vol,when,slideTo){
+  const a=ensureAudio(); if(!a)return;
+  const t=a.currentTime+(when||0);
+  const o=a.createOscillator(),g=a.createGain();
+  o.type=type||'sine';
+  o.frequency.setValueAtTime(freq,t);
+  if(slideTo)o.frequency.exponentialRampToValueAtTime(Math.max(20,slideTo),t+dur);
+  g.gain.setValueAtTime(vol||0.15,t);
+  g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  o.connect(g); g.connect(a.destination);
+  o.start(t); o.stop(t+dur+0.02);
+}
+function noiseHit(dur,vol,freq,when,slideTo){
+  const a=ensureAudio(); if(!a)return;
+  const t=a.currentTime+(when||0);
+  const len=Math.max(1,Math.floor(a.sampleRate*dur));
+  const buf=a.createBuffer(1,len,a.sampleRate);
+  const d=buf.getChannelData(0);
+  for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*(1-i/len);
+  const src=a.createBufferSource(); src.buffer=buf;
+  const f=a.createBiquadFilter(); f.type='lowpass';
+  f.frequency.setValueAtTime(freq,t);
+  if(slideTo)f.frequency.exponentialRampToValueAtTime(Math.max(40,slideTo),t+dur);
+  const g=a.createGain(); g.gain.setValueAtTime(vol,t); g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  src.connect(f); f.connect(g); g.connect(a.destination);
+  src.start(t);
+}
+function sfx(name){
+  if(!S.sfxOn)return;
+  const now=performance.now();
+  if(now-lastSfxAt<110)return;
+  lastSfxAt=now;
+  switch(name){
+    case 'click':  tone(620,0.07,'triangle',0.10); break;
+    case 'drum':   noiseHit(0.22,0.30,420); tone(82,0.30,'sine',0.32,0,48); break;
+    case 'battle': noiseHit(0.22,0.22,2400); tone(240,0.16,'sawtooth',0.10,0.02,120); tone(180,0.18,'square',0.06,0.10,90); break;
+    case 'win':    [523,587,659,784,880].forEach((f,i)=>tone(f,0.28,'triangle',0.12,i*0.09)); break;
+    case 'lose':   [440,392,330,262].forEach((f,i)=>tone(f,0.32,'triangle',0.12,i*0.12)); break;
+    case 'coin':   for(let i=0;i<4;i++)tone(900+Math.random()*700,0.09,'square',0.05,i*0.06); break;
+    case 'fire':   noiseHit(0.55,0.22,1600,0,300); tone(120,0.40,'sawtooth',0.05,0,60); break;
+    case 'alert':  tone(660,0.18,'square',0.10); tone(880,0.22,'square',0.10,0.18); break;
+    case 'gong':   tone(140,1.20,'sine',0.28,0,70); noiseHit(0.60,0.12,900); tone(210,1.00,'triangle',0.12,0.05,100); break;
+  }
+}
+function tryPlayBgm(){
+  if(!S.bgmOn)return;
+  const el=document.getElementById('bgmEl');
+  if(el&&el.paused){ el.volume=0.45; el.play().catch(()=>{}); }
+}
+document.addEventListener('click',()=>{ensureAudio();tryPlayBgm();});
+document.addEventListener('keydown',()=>{ensureAudio();tryPlayBgm();});
 
 /* ================================================================
    工具 / 坐标
@@ -617,10 +701,12 @@ function barbUpliftCheck(n,log){
     n.uplift=true;
     n.foodMult/=T.foodMult; n.goldMult/=T.goldMult;
     log.push(`  ★★【${n.name}】据地六城，渐习农商！产出恢复，不再受「不事农商」之累 ★★`,[n.key]);
+    sfx('alert');
   }else if(n.uplift&&n.cities<=BARB_RELAPSE_CITIES){
     n.uplift=false;
     n.foodMult*=T.foodMult; n.goldMult*=T.goldMult;
     log.push(`  ★★【${n.name}】疆土日蹙（仅剩${n.cities}城），复归游牧旧习，产出再度折半 ★★`,[n.key]);
+    sfx('alert');
   }
 }
 
@@ -814,7 +900,7 @@ function computeCityMods(){
 }
 
 /* ================================================================
-   画布
+   画布（含缩放 / 平移）
    ================================================================ */
 const cv=document.getElementById('map'),ctx=cv.getContext('2d');
 const dpr=window.devicePixelRatio||1;
@@ -825,25 +911,39 @@ function computeCenters(){
   let minXu=1e9,maxXu=-1e9,minYu=1e9,maxYu=-1e9;
   for(const t of list){const xu=t.col*SQ3+(t.row%2?SQ3/2:0),yu=t.row*1.5;minXu=Math.min(minXu,xu);maxXu=Math.max(maxXu,xu);minYu=Math.min(minYu,yu);maxYu=Math.max(maxYu,yu);}
   const spanXu=maxXu-minXu+SQ3,spanYu=maxYu-minYu+2;
-  HEX=Math.min((cvW-24)/spanXu,(cvH-24)/spanYu);
-  mapOx=(cvW-spanXu*HEX)/2-minXu*HEX+SQ3*HEX/2;mapOy=(cvH-spanYu*HEX)/2-minYu*HEX+HEX;
+  const fitHex=Math.min((cvW-24)/spanXu,(cvH-24)/spanYu);
+  HEX=fitHex*ZOOM;
+  mapOx=cvW/2-(minXu+maxXu)/2*HEX+panX;
+  mapOy=cvH/2-(minYu+maxYu)/2*HEX+panY;
   for(const t of list){const xu=t.col*SQ3+(t.row%2?SQ3/2:0),yu=t.row*1.5;t.x=xu*HEX+mapOx;t.y=yu*HEX+mapOy;}
   rebuildRiverPolylines();
 }
+function zoomAt(mx,my,f){
+  const nz=Math.min(MAXZ,Math.max(MINZ,ZOOM*f));
+  if(nz===ZOOM)return;
+  const real=nz/ZOOM;
+  panX=mx-cvW/2-real*(mx-cvW/2-panX);
+  panY=my-cvH/2-real*(my-cvH/2-panY);
+  ZOOM=nz;
+  computeCenters();
+}
+function zoomStep(f){zoomAt(cvW/2,cvH/2,f);}
+function resetView(){ZOOM=1;panX=0;panY=0;computeCenters();}
 window.addEventListener('resize',()=>{sizeCanvas();});
 function axialRound(fq,fr){const s=-fq-fr;let q=Math.round(fq),r=Math.round(fr),ss=Math.round(s);const dq=Math.abs(q-fq),dr=Math.abs(r-fr),ds=Math.abs(ss-s);if(dq>dr&&dq>ds)q=-r-ss;else if(dr>ds)r=-q-ss;return[q,r];}
 function pixelToHexCoords(px,py){const ux=(px-mapOx)/HEX,uy=(py-mapOy)/HEX;const fr=uy/1.5,fq=ux/SQ3-fr/2;const[q,r]=axialRound(fq,fr);return[q+(r-(r&1))/2,r];}
 function drawHex(x,y,fill,stroke,lw){ctx.beginPath();for(let i=0;i<6;i++){const a=Math.PI/180*(60*i-30);const px=x+HEX*Math.cos(a),py=y+HEX*Math.sin(a);i?ctx.lineTo(px,py):ctx.moveTo(px,py);}ctx.closePath();if(fill){ctx.fillStyle=fill;ctx.fill();}if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=lw||1;ctx.stroke();}}
 function drawTerrainSymbol(t){
   if(t.terrain==='water')return;
+  const lsc=Math.min(2,Math.max(0.7,HEX/26));
   const own=t.owner?(NATION_COLORS[t.owner]||'#333'):'#333';const lum=own==='#333'?1:0;
   ctx.fillStyle=lum?'rgba(230,225,215,0.5)':'rgba(20,18,14,0.5)';
-  const dot=(x,y,r)=>{ctx.beginPath();ctx.arc(x,y,r,0,7);ctx.fill();};
-  const tri=(x,y,s)=>{ctx.beginPath();ctx.moveTo(x,y-s*0.6);ctx.lineTo(x+s*0.55,y+s*0.45);ctx.lineTo(x-s*0.55,y+s*0.45);ctx.closePath();ctx.fill();};
-  if(t.terrain==='plain'){dot(t.x-7,t.y,1.8);dot(t.x,t.y,1.8);dot(t.x+7,t.y,1.8);}
+  const dot=(x,y,r)=>{ctx.beginPath();ctx.arc(x,y,r*lsc,0,7);ctx.fill();};
+  const tri=(x,y,s)=>{ctx.beginPath();ctx.moveTo(x,y-s*0.6*lsc);ctx.lineTo(x+s*0.55*lsc,y+s*0.45*lsc);ctx.lineTo(x-s*0.55*lsc,y+s*0.45*lsc);ctx.closePath();ctx.fill();};
+  if(t.terrain==='plain'){dot(t.x-7*lsc,t.y,1.8);dot(t.x,t.y,1.8);dot(t.x+7*lsc,t.y,1.8);}
   else if(t.terrain==='waste'){dot(t.x,t.y,2.3);}
   else if(t.terrain==='hill'){tri(t.x,t.y,9);}
-  else if(t.terrain==='mountain'){tri(t.x-9,t.y+1,8);tri(t.x,t.y-3,8);tri(t.x+9,t.y+1,8);}
+  else if(t.terrain==='mountain'){tri(t.x-9*lsc,t.y+1,8);tri(t.x,t.y-3,8);tri(t.x+9*lsc,t.y+1,8);}
 }
 function roundRect(x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
 function ownerComponents(){
@@ -867,17 +967,18 @@ function drawBattleMarks(){
 }
 function drawMap(){
   const isEditor=S.mode==='editor';
+  const lsc=Math.min(2,Math.max(0.7,HEX/26));
   ctx.clearRect(0,0,cvW,cvH);
   for(const t of tileList()){const color=t.terrain==='water'?'#2f5d78':(t.owner?(NATION_COLORS[t.owner]||'#444'):'#15181d');drawHex(t.x,t.y,color,isEditor?'rgba(120,120,120,0.25)':null,1);}
   for(const t of tileList())drawTerrainSymbol(t);
   const doneBorder=new Set();
   for(const t of tileList()){if(t.terrain==='water')continue;const nbs=neighborCoords(t.col,t.row);for(let d=0;d<6;d++){const[nc,nr]=nbs[d];const nb=tileAt(nc,nr);if(!nb||nb.terrain==='water')continue;if((nb.owner||'')===(t.owner||''))continue;const k=edgeKey(t.col,t.row,nc,nr);if(riverEdgeSet.has(k)||doneBorder.has(k))continue;doneBorder.add(k);const[p1,p2]=edgePointsByDir(t,d);ctx.beginPath();ctx.moveTo(p1[0],p1[1]);ctx.lineTo(p2[0],p2[1]);ctx.strokeStyle='#0b0d10';ctx.lineWidth=2.4;ctx.stroke();}}
   drawRivers();
-  for(const br of bridges){const t1=tileAt(br.a[0],br.a[1]),t2=tileAt(br.b[0],br.b[1]);if(!t1||!t2)continue;const mx=(t1.x+t2.x)/2,my=(t1.y+t2.y)/2;const dx=t2.x-t1.x,dy=t2.y-t1.y,len=Math.hypot(dx,dy)||1;const ux=dx/len*(HEX*0.42),uy=dy/len*(HEX*0.42);ctx.beginPath();ctx.moveTo(mx-ux,my-uy);ctx.lineTo(mx+ux,my+uy);ctx.strokeStyle='#12151b';ctx.lineWidth=6.5;ctx.stroke();ctx.strokeStyle='#c9a86a';ctx.lineWidth=4;ctx.stroke();ctx.font='9px "Noto Serif SC",serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.lineWidth=2.5;ctx.strokeStyle='rgba(12,14,18,0.9)';ctx.strokeText(br.name,mx,my-HEX*0.62);ctx.fillStyle='#f0e2c0';ctx.fillText(br.name,mx,my-HEX*0.62);}
+  for(const br of bridges){const t1=tileAt(br.a[0],br.a[1]),t2=tileAt(br.b[0],br.b[1]);if(!t1||!t2)continue;const mx=(t1.x+t2.x)/2,my=(t1.y+t2.y)/2;const dx=t2.x-t1.x,dy=t2.y-t1.y,len=Math.hypot(dx,dy)||1;const ux=dx/len*(HEX*0.42),uy=dy/len*(HEX*0.42);ctx.beginPath();ctx.moveTo(mx-ux,my-uy);ctx.lineTo(mx+ux,my+uy);ctx.strokeStyle='#12151b';ctx.lineWidth=6.5;ctx.stroke();ctx.strokeStyle='#c9a86a';ctx.lineWidth=4;ctx.stroke();ctx.font=`${Math.round(9*lsc)}px "Noto Serif SC",serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.lineWidth=2.5;ctx.strokeStyle='rgba(12,14,18,0.9)';ctx.strokeText(br.name,mx,my-HEX*0.62);ctx.fillStyle='#f0e2c0';ctx.fillText(br.name,mx,my-HEX*0.62);}
   const doneCounty=new Set();
   for(const t of tileList()){if(t.terrain==='water')continue;const nbs=neighborCoords(t.col,t.row);for(let d=0;d<6;d++){const[nc,nr]=nbs[d];const nb=tileAt(nc,nr);if(!nb||nb.terrain==='water')continue;if((nb.owner||'')!==(t.owner||''))continue;if(nb.cityId===t.cityId)continue;const k=edgeKey(t.col,t.row,nc,nr);if(doneCounty.has(k))continue;doneCounty.add(k);const[p1,p2]=edgePointsByDir(t,d);ctx.beginPath();ctx.moveTo(p1[0],p1[1]);ctx.lineTo(p2[0],p2[1]);if(isEditor){ctx.setLineDash([5,3]);ctx.lineWidth=2;ctx.strokeStyle='rgba(240,225,180,0.85)';}else{ctx.setLineDash([4,4]);ctx.lineWidth=1.2;ctx.strokeStyle='rgba(10,12,16,0.9)';}ctx.stroke();ctx.setLineDash([]);}}
-  for(const city of activeCities()){const t=tileAt(city.col,city.row);if(!t)continue;const w=HEX*0.72,h=HEX*0.52,iy=t.y-h/2-HEX*0.12;roundRect(t.x-w/2,iy,w,h,3);ctx.fillStyle='rgba(16,19,25,0.92)';ctx.fill();ctx.strokeStyle='rgba(212,169,66,0.5)';ctx.lineWidth=1;ctx.stroke();ctx.fillStyle=city.capital?'#f2d264':'#e8d9a8';ctx.font='12px "Noto Serif SC",serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(city.capital?'★':'城',t.x,iy+h/2);ctx.font='11px "Noto Serif SC",serif';const w1=ctx.measureText(city.name).width;const fTxt=city.fort>0?(' 防'+city.fort):'';const w2=fTxt?ctx.measureText(fTxt).width:0;const total=w1+w2,py=t.y+HEX*0.95;roundRect(t.x-total/2-5,py-8,total+10,16,3);ctx.fillStyle='rgba(15,18,23,0.92)';ctx.fill();ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillStyle='#f2e8cf';ctx.fillText(city.name,t.x-total/2,py);if(fTxt){ctx.fillStyle='#f2d264';ctx.fillText(fTxt,t.x-total/2+w1,py);}}
-  for(const comp of ownerComponents()){const x=comp.tiles.reduce((s,t)=>s+t.x,0)/comp.tiles.length;const y=comp.tiles.reduce((s,t)=>s+t.y,0)/comp.tiles.length;const size=comp.tiles.length>=8?23:comp.tiles.length>=4?16:11;ctx.font=`900 ${size}px "ZCOOL XiaoWei","Noto Serif SC",serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.lineWidth=4;ctx.strokeStyle='rgba(12,14,18,0.92)';ctx.strokeText(comp.owner,x,y);ctx.fillStyle='#f4ead2';ctx.fillText(comp.owner,x,y);}
+  for(const city of activeCities()){const t=tileAt(city.col,city.row);if(!t)continue;const w=HEX*0.72,h=HEX*0.52,iy=t.y-h/2-HEX*0.12;roundRect(t.x-w/2,iy,w,h,3);ctx.fillStyle='rgba(16,19,25,0.92)';ctx.fill();ctx.strokeStyle='rgba(212,169,66,0.5)';ctx.lineWidth=1;ctx.stroke();ctx.fillStyle=city.capital?'#f2d264':'#e8d9a8';ctx.font=`${Math.round(12*lsc)}px "Noto Serif SC",serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(city.capital?'★':'城',t.x,iy+h/2);ctx.font=`${Math.round(11*lsc)}px "Noto Serif SC",serif`;const w1=ctx.measureText(city.name).width;const fTxt=city.fort>0?(' 防'+city.fort):'';const w2=fTxt?ctx.measureText(fTxt).width:0;const total=w1+w2,py=t.y+HEX*0.95;roundRect(t.x-total/2-5,py-8*lsc,total+10,16*lsc,3);ctx.fillStyle='rgba(15,18,23,0.92)';ctx.fill();ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillStyle='#f2e8cf';ctx.fillText(city.name,t.x-total/2,py);if(fTxt){ctx.fillStyle='#f2d264';ctx.fillText(fTxt,t.x-total/2+w1,py);}}
+  for(const comp of ownerComponents()){const x=comp.tiles.reduce((s,t)=>s+t.x,0)/comp.tiles.length;const y=comp.tiles.reduce((s,t)=>s+t.y,0)/comp.tiles.length;const size=(comp.tiles.length>=8?23:comp.tiles.length>=4?16:11)*lsc;ctx.font=`900 ${Math.round(size)}px "ZCOOL XiaoWei","Noto Serif SC",serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.lineWidth=4;ctx.strokeStyle='rgba(12,14,18,0.92)';ctx.strokeText(comp.owner,x,y);ctx.fillStyle='#f4ead2';ctx.fillText(comp.owner,x,y);}
   drawBattleMarks();
   if(isEditor&&E.src)drawHex(E.src.x,E.src.y,'rgba(212,169,66,0.28)','#f0e2b0',3);
   if(UI.pending&&hoverCity)for(const t of hoverCity.tiles)drawHex(t.x,t.y,'rgba(255,255,255,0.15)','#f0e2b0',2.6);
@@ -893,15 +994,15 @@ function drawWeatherFX(){
 }
 
 /* ================================================================
-   战斗与结算（蛮夷：低杀伤、高掠夺、半力可掠）
+   战斗与结算（唯玩家可攻下蛮夷城池）
    ================================================================ */
 function markBattle(att,city){const edges=[];for(const t of city.tiles)for(const[nc,nr]of neighborCoords(t.col,t.row)){const nb=tileAt(nc,nr);if(nb&&nb.owner===att.key)edges.push(edgeKey(t.col,t.row,nc,nr));}if(edges.length)battleMarks.push(edges);}
-function fireAttack(att,city,weather,log){const dfn=nationOf(city.owner);if(!dfn)return;const hits=dfn.fireHits;dfn.fireHits++;const dim=FIRE_DIMINISH[Math.min(hits,FIRE_DIMINISH.length-1)];let dmg=Math.floor(rnd(FIRE_DMG_MIN,FIRE_DMG_MAX)*weather.fire*(1+att.fireBonus)*(dfn.defending?0.6:1)*dim);dmg=Math.max(0,dmg);const lost=loseTroops(dfn,dmg);dfn.food=Math.max(0,dfn.food-FIRE_FOOD_BURN);setMorale(dfn,dfn.morale-5);log.push(`  【${att.name}】火攻【${city.name}】${hits>0?'（再次中火，收效甚微）':''}！【${dfn.name}】损兵${lost}、粮草-${FIRE_FOOD_BURN}、士气-5`,[att.key,dfn.key]);}
+function fireAttack(att,city,weather,log){const dfn=nationOf(city.owner);if(!dfn)return;const hits=dfn.fireHits;dfn.fireHits++;const dim=FIRE_DIMINISH[Math.min(hits,FIRE_DIMINISH.length-1)];let dmg=Math.floor(rnd(FIRE_DMG_MIN,FIRE_DMG_MAX)*weather.fire*(1+att.fireBonus)*(dfn.defending?0.6:1)*dim);dmg=Math.max(0,dmg);const lost=loseTroops(dfn,dmg);dfn.food=Math.max(0,dfn.food-FIRE_FOOD_BURN);setMorale(dfn,dfn.morale-5);log.push(`  【${att.name}】火攻【${city.name}】${hits>0?'（再次中火，收效甚微）':''}！【${dfn.name}】损兵${lost}、粮草-${FIRE_FOOD_BURN}、士气-5`,[att.key,dfn.key]);sfx('fire');}
 function isPlunder(att,city){
   const dfn=nationOf(city.owner);
   if(!dfn)return true;
   if(BARBARIAN_KEYS.has(att.key)&&!att.isPlayer)return true;
-  if(BARBARIAN_KEYS.has(city.owner)&&!dfn.isPlayer)return true;
+  if(BARBARIAN_KEYS.has(city.owner)&&!dfn.isPlayer&&!att.isPlayer)return true;
   return false;
 }
 function doPlunder(att,city,duel,lootBase,moraleGain,log,share){
@@ -917,12 +1018,13 @@ function doPlunder(att,city,duel,lootBase,moraleGain,log,share){
   if(BARBARIAN_KEYS.has(city.owner)&&!dfn.isPlayer){
     setMorale(dfn,dfn.morale-15);
     dfn.attackCooldown=Math.max(dfn.attackCooldown,BARB_BEATEN_COOLDOWN);
-    log.push(`    【${att.name}】击破【${dfn.name}】于【${city.name}】！掠金${lootTotal}、粮${lootFood}、杀伤${lost}，迫其${BARB_BEATEN_COOLDOWN}回合内不敢犯边（蛮夷之地不可占）`,[att.key,dfn.key]);
+    log.push(`    【${att.name}】击破【${dfn.name}】于【${city.name}】！掠金${lootTotal}、粮${lootFood}、杀伤${lost}，迫其${BARB_BEATEN_COOLDOWN}回合内不敢犯边（人机不可占蛮夷之地）`,[att.key,dfn.key]);
   }else{
     setMorale(dfn,dfn.morale-12);
     dfn.plunderedBy=att.key;dfn.grudgeTurns=GRUDGE_TURNS;
     log.push(`    【${att.name}】劫掠【${city.name}】！掠金${lootTotal}、粮${lootFood}、杀伤${lost}`,[att.key,dfn.key]);
   }
+  sfx('coin');
 }
 function battle(att,city,weather,aiMult,log,turn,duel){
   const dfn=nationOf(city.owner);
@@ -945,6 +1047,7 @@ function battle(att,city,weather,aiMult,log,turn,duel){
   const dfnLoss=loseTroops(dfn,Math.max(5,Math.floor(dfn.troops*DEFEND_LOSS_RATE*attPow/total*(1+att.slayBonus)*(1-city.fort*FORT_LOSS_PER_LEVEL)*dfnLm*(attRaid?BARB_DEFENDER_LOSS_MULT:1))));
   const xTag=ci.bridge?'·过桥':(ci.cross?(weather.name==='大雨'?'·暴雨跨河':'·跨河'):'');
   log.push(`  【${att.name}】攻打【${city.name}】（城防${city.fort}级${city.mods.river?'·沿河':''}${xTag}）——【${tierName}】！【${att.name}】损兵${attLoss}，【${dfn.name}】损兵${dfnLoss}`,[att.key,dfn.key]);
+  sfx('battle');
   if(attRaid){
     const half=captureThreshold(dfnPow,dfn,turn,duel)*BARB_HALF_POWER;
     if(tierName==='平手'||tierName==='惨败'){
@@ -957,11 +1060,11 @@ function battle(att,city,weather,aiMult,log,turn,duel){
     return;
   }
   if(tierName==='平手'){setMorale(att,att.morale-3);setMorale(dfn,dfn.morale-3);log.push(`    两军杀得难解难分，各自收兵，${city.name}未易主`,[att.key,dfn.key]);return;}
-  if(tierName==='惨败'){setMorale(att,att.morale-12);setMorale(dfn,dfn.morale+6);log.push(`    【${att.name}】攻城大败，士气大跌！`,[att.key,dfn.key]);return;}
+  if(tierName==='惨败'){setMorale(att,att.morale-12);setMorale(dfn,dfn.morale+6);log.push(`    【${att.name}】攻城大败，士气大跌！`,[att.key,dfn.key]);sfx('lose');return;}
   const need=captureThreshold(dfnPow,dfn,turn,duel);
   if(attPow<=need){setMorale(att,att.morale-4);setMorale(dfn,dfn.morale+3);log.push(`    【${att.name}】虽击退敌军，但【${city.name}】城防坚固，未能破城！`,[att.key,dfn.key]);return;}
   if(isPlunder(att,city)){doPlunder(att,city,duel,loot,moraleGain,log,1);return;}
-  const capture=Math.min(capNum+(duel?DUEL_CAPTURE_BONUS:0),cityCount(dfn.key));
+  const capture=Math.min(1+(duel?DUEL_CAPTURE_BONUS:0),cityCount(dfn.key));
   captureCity(att,city,log,turn);
   for(let i=1;i<capture;i++){const rest=citiesOf(dfn.key).filter(c=>canReach(att.key,c));if(!rest.length)break;captureCity(att,rest[0],log,turn);}
   const lootTotal=Math.floor((loot+(att.lootBonus?15:0))*(att.lootMult||1)*(duel?DUEL_LOOT_MULT:1));
@@ -974,7 +1077,7 @@ function decisiveClash(att,city,weather,aiMult,log,turn){
   if(!dfn||!dfn.alive||city.owner===att.key){log.push(`  【${att.name}】向【${city.name}】邀战，但该城已易主`,[att.key]);return;}
   spend(att,50,50);markBattle(att,city);dfn.lastAttacker=att;
   if(!BARBARIAN_KEYS.has(att.key)&&att.plunderedBy===city.owner){att.plunderedBy=null;att.grudgeTurns=0;}
-  if(att.morale<CLASH_MIN_MORALE){const lost=loseTroops(att,Math.floor(att.troops*CLASH_ROUT_LOSS));setMorale(att,att.morale*CLASH_ROUT_MORALE);log.push(`  【${att.name}】强令出战【${city.name}】，然军心不稳，未战先溃！损兵${lost}（八成溃散），士气仅余两成！`,[att.key,dfn.key]);return;}
+  if(att.morale<CLASH_MIN_MORALE){const lost=loseTroops(att,Math.floor(att.troops*CLASH_ROUT_LOSS));setMorale(att,att.morale*CLASH_ROUT_MORALE);log.push(`  【${att.name}】强令出战【${city.name}】，然军心不稳，未战先溃！损兵${lost}（八成溃散），士气仅余两成！`,[att.key,dfn.key]);sfx('lose');return;}
   const attRaid=BARBARIAN_KEYS.has(att.key)&&!att.isPlayer;
   const stg=stagingMods(att.key,city);const ci=crossInfo(att.key,city),cp=crossPenalty(ci,weather);
   let atkMult=(1+att.atkBonus)*weather.atk*stg.atk*cp;
@@ -988,6 +1091,7 @@ function decisiveClash(att,city,weather,aiMult,log,turn){
   const dfnLoss=loseTroops(dfn,Math.max(10,Math.floor(dfn.troops*CLASH_DFN_LOSS*attPow/total*(attRaid?BARB_DEFENDER_LOSS_MULT:1))));
   const xTag=ci.bridge?'·过桥':(ci.cross?'·跨河':'');
   log.push(`  【${att.name}】向【${city.name}】发起会战${xTag}！【${att.name}】损兵${attLoss}，【${dfn.name}】损兵${dfnLoss}`,[att.key,dfn.key]);
+  sfx('battle');
   if(attRaid){
     if(attPow>dfnPow){ doPlunder(att,city,false,CLASH_LOOT,10,log,1); }
     else { setMorale(att,att.morale-6); doPlunder(att,city,false,CLASH_LOOT,5,log,BARB_PLUNDER_HALF); }
@@ -1007,26 +1111,27 @@ function captureCity(att,city,log,turn,silent){
   const dfn=nationOf(city.owner);
   if(!dfn||city.owner===att.key)return;
   if(BARBARIAN_KEYS.has(att.key)&&!att.isPlayer){doPlunder(att,city,false,25,6,log,1);return;}
-  if(BARBARIAN_KEYS.has(city.owner)&&!dfn.isPlayer){
+  if(BARBARIAN_KEYS.has(city.owner)&&!dfn.isPlayer&&!att.isPlayer){
     dfn.attackCooldown=Math.max(dfn.attackCooldown,BARB_BEATEN_COOLDOWN);
-    log.push(`    ★【${att.name}】迫退【${dfn.name}】，${BARB_BEATEN_COOLDOWN}回合内其不敢犯边（蛮夷之地不可占）`,[att.key,dfn.key]);
+    log.push(`    ★【${att.name}】迫退【${dfn.name}】，${BARB_BEATEN_COOLDOWN}回合内其不敢犯边（人机不可占蛮夷之地）`,[att.key,dfn.key]);
     return;
   }
   city.owner=att.key;
   for(const t of city.tiles)t.owner=att.key;
   if(city.capital){city.capital=false;const rest=citiesOf(dfn.key);if(rest.length)rest[0].capital=true;}
   syncCounts();
-  if(!silent)log.push(`    →【${city.name}】易主，归【${att.name}】`,[att.key,dfn.key]);
+  if(!silent){log.push(`    →【${city.name}】易主，归【${att.name}】`,[att.key,dfn.key]);sfx('win');}
   if(cityCount(dfn.key)===0)hanDefeated(dfn,att,turn,log);
 }
 function hanDefeated(n,conqueror,turn,log){
   if(n.canRevive&&!n.revived&&conqueror){n.alive=false;n.canRevive=false;n.conqueror=conqueror;conqueror.resisted=true;
     log.push(`    ★★【${n.name}】城池尽失！但韩民不降，转入流亡！★★`,[n.key,conqueror.key]);
     log.push(`    ★ 灭韩的【${conqueror.name}】遭到韩人抵抗：每回合损兵${HAN_RESIST_TROOPS}±4、士气-${HAN_RESIST_MORALE}、粮草-${HAN_RESIST_FOOD}、金钱-${HAN_RESIST_GOLD}！`,[conqueror.key]);
-  }else{n.alive=false;n.revived=true;n.elimTurn=turn;log.push(`    ★★【${n.name}】城池尽失，当场亡国！★★`,[n.key]);}
+    sfx('alert');
+  }else{n.alive=false;n.revived=true;n.elimTurn=turn;log.push(`    ★★【${n.name}】城池尽失，当场亡国！★★`,[n.key]);sfx('alert');}
 }
 function checkHanUprising(nations,turn,log){
-  for(const n of nations){if(n.alive||n.key!=='韩'||n.canRevive||n.revived)continue;const c=n.conqueror,alive=aliveList(nations),lastStand=alive.length===1;let rise=false;if(c&&c.alive&&c.troops<HAN_REVIVE_TROOPS)rise=true;if(lastStand)rise=true;if(!rise)continue;let target=null;if(c&&c.alive&&citiesOf(c.key).length)target=c;else if(alive.length)target=alive.reduce((a,b)=>(a.cities*100+a.troops)>(b.cities*100+b.troops)?a:b);if(!target||!citiesOf(target.key).length)continue;n.alive=true;n.revived=true;n.conqueror=null;const cand=citiesOf(target.key).slice().sort((a,b)=>hexDist(a.col,a.row,7,6)-hexDist(b.col,b.row,7,6));captureCity(n,cand[0],log,turn,true);n.troops=HAN_REVIVE_TROOP_GAIN;n.food=HAN_REVIVE_FOOD;n.gold=HAN_REVIVE_GOLD;n.morale=HAN_REVIVE_MORALE;target.resisted=false;if(lastStand)log.push(`    ★★★ 韩国流亡政府号令天下：末路举兵，决一死战！夺【${cand[0].name}】，兵力${n.troops} ★★★`,[n.key,target.key]);else log.push(`    ★★★【韩】起兵复国！夺回【${cand[0].name}】，兵力${n.troops}、粮草${n.food}、金钱${n.gold} ★★★`,[n.key,target.key]);syncCounts();}
+  for(const n of nations){if(n.alive||n.key!=='韩'||n.canRevive||n.revived)continue;const c=n.conqueror,alive=aliveList(nations),lastStand=alive.length===1;let rise=false;if(c&&c.alive&&c.troops<HAN_REVIVE_TROOPS)rise=true;if(lastStand)rise=true;if(!rise)continue;let target=null;if(c&&c.alive&&citiesOf(c.key).length)target=c;else if(alive.length)target=alive.reduce((a,b)=>(a.cities*100+a.troops)>(b.cities*100+b.troops)?a:b);if(!target||!citiesOf(target.key).length)continue;n.alive=true;n.revived=true;n.conqueror=null;const cand=citiesOf(target.key).slice().sort((a,b)=>hexDist(a.col,a.row,7,6)-hexDist(b.col,b.row,7,6));captureCity(n,cand[0],log,turn,true);n.troops=HAN_REVIVE_TROOP_GAIN;n.food=HAN_REVIVE_FOOD;n.gold=HAN_REVIVE_GOLD;n.morale=HAN_REVIVE_MORALE;target.resisted=false;if(lastStand)log.push(`    ★★★ 韩国流亡政府号令天下：末路举兵，决一死战！夺【${cand[0].name}】，兵力${n.troops} ★★★`,[n.key,target.key]);else log.push(`    ★★★【韩】起兵复国！夺回【${cand[0].name}】，兵力${n.troops}、粮草${n.food}、金钱${n.gold} ★★★`,[n.key,target.key]);syncCounts();sfx('alert');}
 }
 function wrapLogFor(arr){return{push:(t)=>arr.push(t)};}
 function resolveRound(nations,weather,aiMult,aiBonus,log,turn){
@@ -1167,7 +1272,7 @@ function showLogs(lines,done){if(S.speed===3){lines.forEach(l=>addLog(l));done()
 function applyFilter(){const f=S.logFilter;document.querySelectorAll('#log p').forEach(p=>{p.style.display=(f==='全部'||p.dataset.about.split(',').includes(f))?'':'none';});}
 function renderFilter(){const box=document.getElementById('logFilter');box.innerHTML='';const keys=['全部'].concat(S.nations.map(n=>n.key));for(const k of keys){const b=document.createElement('div');b.className='fchip'+(S.logFilter===k?' sel':'');b.textContent=k;b.addEventListener('click',()=>{S.logFilter=k;renderFilter();applyFilter();});box.appendChild(b);}}
 function renderLegend(){const box=document.getElementById('legend');const keys=S.nations.length?S.nations.map(n=>n.key):NATION_KEYS;let html='';for(const k of keys)html+=`<div class="lg"><span class="sw" style="background:${NATION_COLORS[k]}"></span>【${k}】${BARBARIAN_KEYS.has(k)?'(蛮夷)':''}</div>`;html+='<div class="lg" style="margin-left:6px; color:#d4a942">地形：</div><div class="lg">平原(···)</div><div class="lg">丘陵(△)</div><div class="lg">山地(△△△)</div><div class="lg">荒原(·)</div>';html+='<div class="lg"><span class="sw" style="background:#2f5d78"></span>水域</div><div class="lg"><span class="sw" style="background:#4b8fc7"></span>江河</div><div class="lg"><span class="sw" style="background:#c9a86a"></span>渡口</div>';html+='<div class="lg" style="margin-left:6px;">⚔️=本回合战地　黑实线=国界　黑虚线=郡界　★=都城</div>';box.innerHTML=html;}
-function renderAll(){renderLegend();document.getElementById('turnNum').textContent=S.turn;document.getElementById('weatherName').textContent=S.weather.name;document.getElementById('weatherDesc').textContent=S.weather.desc;document.getElementById('mapTip').textContent=S.mode==='editor'?`工具：${({assign:'划归',terrain:'地形',add:'新建地块',del:'删地块',addCity:'建城',delCity:'删城',rename:'改名',river:'绘河',unriver:'擦河',addBridge:'建桥',delBridge:'删桥',color:'调色'})[E.tool]}`:'悬停查看地块详情 · 点击地图选定目标城池';renderNationCards();renderPlayerPanel();renderFilter();}
+function renderAll(){renderLegend();document.getElementById('turnNum').textContent=S.turn;document.getElementById('weatherName').textContent=S.weather.name;document.getElementById('weatherDesc').textContent=S.weather.desc;document.getElementById('mapTip').textContent=S.mode==='editor'?`工具：${({assign:'划归',terrain:'地形',add:'新建地块',del:'删地块',addCity:'建城',delCity:'删城',rename:'改名',river:'绘河',unriver:'擦河',addBridge:'建桥',delBridge:'删桥',color:'调色'})[E.tool]} · 滚轮缩放 · 拖拽平移`:'悬停查看地块详情 · 点击地图选定目标城池 · 滚轮缩放 · 拖拽平移 · 0复位';renderNationCards();renderPlayerPanel();renderFilter();}
 function renderNationCards(){
   const wrap=document.getElementById('nationCards');wrap.innerHTML='';
   for(const n of S.nations){
@@ -1229,15 +1334,17 @@ function tryOrder(key){
     if(!v.length){addLog('    当前没有可选目标（攻伐须与敌境接壤）。','sys');return;}
     UI.pending=UI.pending===key?null:key;
   }else{UI.slots.push([key,null]);UI.pending=null;}
+  sfx('click');
   renderPlayerPanel();
 }
-function pickTarget(city){if(!UI.pending)return;const key=UI.pending;if(!validTargets(key).includes(city)){addLog(`    【${city.name}】不是有效目标（攻伐须与敌境接壤）。`,'sys');return;}UI.slots.push([key,city]);UI.pending=null;renderPlayerPanel();}
+function pickTarget(city){if(!UI.pending)return;const key=UI.pending;if(!validTargets(key).includes(city)){addLog(`    【${city.name}】不是有效目标（攻伐须与敌境接壤）。`,'sys');return;}UI.slots.push([key,city]);UI.pending=null;sfx('click');renderPlayerPanel();}
 function autoFillOrders(){
   const me=S.me;if(!me||!me.alive)return;
   const fireMarks=new Map(),attackMarks=new Map();
   for(const[k,t]of UI.slots){if(k==='fire'&&t)fireMarks.set(t,(fireMarks.get(t)||0)+1);if((k==='attack'||k==='clash')&&t)attackMarks.set(t,(attackMarks.get(t)||0)+1);}
   const picks=aiOrders(me,S.nations,S.weather,fireMarks,attackMarks,S.turn,aliveList(S.nations).length===2,ORDERS_PER_TURN);
   for(const[k,t]of picks){if(UI.slots.length>=ORDERS_PER_TURN)break;if(UI.slots.some(o=>o[0]===k))continue;UI.slots.push([k,t]);}
+  sfx('click');
   renderPlayerPanel();
 }
 
@@ -1300,6 +1407,7 @@ function afterRound(){
   if(cont.length===2&&!S.duelReported){
     S.duelReported=true;
     addLog('★★ 天下仅剩两国争雄！终局决战——胜仗多夺1城、夺城门槛-25%、掠夺+50%！并立招降之制：一方多出4城且连续保持10回合，对方便须俯首称臣！（AI蛮夷不计入）★★','sys');
+    sfx('alert');
   }
   if(cont.length===2){
     const a=cont[0],b=cont[1];
@@ -1361,6 +1469,7 @@ function endGame(title,sub){
   html+=`<div class="kv">本局阵亡士兵总计：<b>${totalLost}</b><br>★ 损失士兵最多：<b>【${topLoss.name}】</b> 阵亡 ${topLoss.troopsLost}<br>★ 最先淘汰：<b>${eliminated.length?`【${eliminated[0].name}】第 ${eliminated[0].elimTurn} 回合`:'无'}</b><br>★ 耗费金钱最多：<b>【${topGold.name}】</b> 花金 ${topGold.goldSpent}<br>★ 耗费粮草最多：<b>【${topFood.name}】</b> 花粮 ${topFood.foodSpent}</div>`;
   document.getElementById('endStats').innerHTML=html;
   document.getElementById('endMask').classList.remove('hide');
+  sfx('gong');
 }
 
 /* ================================================================
@@ -1433,7 +1542,7 @@ bindChipGroup('speedBtns','sp',v=>S.speed=+v);
 bindChipGroup('edTools','tool',v=>{E.tool=v;E.src=null;renderPlayerPanel();});
 bindChipGroup('edTerrain','terr',v=>{E.paint=v;});
 document.getElementById('edColor').addEventListener('input',e=>{NATION_COLORS[E.nation]=e.target.value;});
-document.getElementById('startBtn').addEventListener('click',startGame);
+document.getElementById('startBtn').addEventListener('click',()=>{sfx('drum');startGame();});
 document.getElementById('againBtn').addEventListener('click',()=>{
   document.getElementById('endMask').classList.add('hide');
   document.getElementById('startMask').classList.remove('hide');
@@ -1466,14 +1575,14 @@ function startGame(){
       addLog(`【世界】战国七雄（无蛮夷）：蛮夷村庄尽除，其地化为无主荒野。`,'sys');
     }else{
       others=NATION_KEYS.filter(k=>k!==cfg.nation&&hasCities(k)).sort(()=>Math.random()-0.5).slice(0,cfg.count);
-      addLog(`【世界】天下大乱（含蛮夷：匈奴/戎狄/百越）：蛮夷劫掠为生，AI蛮夷只掠不占。`,'sys');
+      addLog(`【世界】天下大乱（含蛮夷：匈奴/戎狄/百越）：蛮夷劫掠为生，AI蛮夷只掠不占；唯玩家可攻下蛮夷城池。`,'sys');
     }
     keysInPlay.push(cfg.nation,...others);
     S.nations=keysInPlay.map(k=>makeNation(k,k===cfg.nation));
     S.me=S.nations[0];
     addLog(`本局登场：${keysInPlay.map(k=>'【'+k+'】'+(BARBARIAN_KEYS.has(k)?'(蛮夷)':'')).join('、')}｜难度【${d.name}】（人机每回合${d.orders}道军令）`,'sys');
     if(cfg.nation==='韩')addLog('★ 你是韩国：开局弱小，易被围攻。首次亡国不灭——灭你的国家将遭「韩人抵抗」，其兵力低于70时你将起兵复国！★','sys');
-    if(BARBARIAN_KEYS.has(cfg.nation))addLog(`★ 你是蛮夷【${cfg.nation}】：杀伤有限、掠夺丰厚。据六城可脱「不事农商」之累（产出-50%），缩回三城则复归旧习。★`,'sys');
+    if(BARBARIAN_KEYS.has(cfg.nation))addLog(`★ 你是蛮夷【${cfg.nation}】：杀伤有限、掠夺丰厚，七国与AI蛮夷之城皆可攻下（AI蛮夷掠夺不占城）。据六城可脱「不事农商」之累（产出-50%），缩回三城则复归旧习。★`,'sys');
   }else{
     S.precise=false;S.aiOrderCount=3;
     const keys=cfg.wNoBarb
@@ -1512,10 +1621,10 @@ document.getElementById('edApply').addEventListener('click',()=>{
 });
 const exMask=document.getElementById('exMask');
 function closeEx(){exMask.classList.add('hide');}
-document.getElementById('exchangeBtn').addEventListener('click',()=>{const me=S.me;if(!me)return;document.getElementById('exInfo').innerHTML=`当前：<b>金钱 ${me.gold}</b> · <b>粮草 ${me.food}</b>　（不占军令次数）`;exMask.classList.remove('hide');});
+document.getElementById('exchangeBtn').addEventListener('click',()=>{const me=S.me;if(!me)return;document.getElementById('exInfo').innerHTML=`当前：<b>金钱 ${me.gold}</b> · <b>粮草 ${me.food}</b>　（不占军令次数）`;exMask.classList.remove('hide');sfx('click');});
 document.getElementById('exClose').addEventListener('click',closeEx);
 document.getElementById('exDone').addEventListener('click',closeEx);
-exMask.addEventListener('click',e=>{if(e.target===exMask){closeEx();return;}const btn=e.target.closest('[data-ex]'),me=S.me;if(btn&&me){const kind=btn.dataset.ex;if(kind.startsWith('fg')){let amt=kind==='fg10'?10:kind==='fg50'?50:Math.floor(me.food/EXCHANGE_RATE);amt=Math.min(amt,Math.floor(me.food/EXCHANGE_RATE));if(amt>0){spend(me,0,amt*EXCHANGE_RATE);me.gold+=amt;}}else{let amt=kind==='gf10'?10:kind==='gf50'?50:me.gold;amt=Math.min(amt,me.gold);if(amt>0){spend(me,amt,0);me.food+=amt*EXCHANGE_RATE;}}document.getElementById('exInfo').innerHTML=`当前：<b>金钱 ${me.gold}</b> · <b>粮草 ${me.food}</b>　（不占军令次数）`;renderAll();}});
+exMask.addEventListener('click',e=>{if(e.target===exMask){closeEx();return;}const btn=e.target.closest('[data-ex]'),me=S.me;if(btn&&me){const kind=btn.dataset.ex;if(kind.startsWith('fg')){let amt=kind==='fg10'?10:kind==='fg50'?50:Math.floor(me.food/EXCHANGE_RATE);amt=Math.min(amt,Math.floor(me.food/EXCHANGE_RATE));if(amt>0){spend(me,0,amt*EXCHANGE_RATE);me.gold+=amt;sfx('coin');}}else{let amt=kind==='gf10'?10:kind==='gf50'?50:me.gold;amt=Math.min(amt,me.gold);if(amt>0){spend(me,amt,0);me.food+=amt*EXCHANGE_RATE;sfx('coin');}}document.getElementById('exInfo').innerHTML=`当前：<b>金钱 ${me.gold}</b> · <b>粮草 ${me.food}</b>　（不占军令次数）`;renderAll();}});
 function openHistory(){
   const key=S.me?S.me.key:null;
   const box=document.getElementById('histBody');
@@ -1534,7 +1643,7 @@ function openHistory(){
 document.getElementById('histDone').addEventListener('click',()=>document.getElementById('histMask').classList.add('hide'));
 document.getElementById('histClose').addEventListener('click',()=>document.getElementById('histMask').classList.add('hide'));
 document.getElementById('autoFillBtn').addEventListener('click',autoFillOrders);
-document.getElementById('submitBtn').addEventListener('click',()=>{if(UI.slots.length<ORDERS_PER_TURN||S.busy)return;UI.pending=null;runRound();});
+document.getElementById('submitBtn').addEventListener('click',()=>{if(UI.slots.length<ORDERS_PER_TURN||S.busy)return;UI.pending=null;sfx('drum');runRound();});
 
 /* 教程面板 */
 const tutMask=document.getElementById('tutMask');
@@ -1545,11 +1654,70 @@ document.getElementById('tutDone').addEventListener('click',closeTut);
 document.getElementById('tutBtn').addEventListener('click',openTut);
 document.getElementById('startTutBtn').addEventListener('click',openTut);
 tutMask.addEventListener('click',e=>{if(e.target===tutMask)closeTut();});
-document.addEventListener('keydown',e=>{if(e.key==='Escape')closeTut();});
+
+/* 音乐 / 音效开关 */
+function refreshSndBtns(){
+  const b=document.getElementById('bgmBtn'),s=document.getElementById('sfxBtn');
+  b.textContent=S.bgmOn?'♪ 音乐：开':'♪ 音乐：关';
+  b.classList.toggle('off',!S.bgmOn);
+  s.textContent=S.sfxOn?'♪ 音效：开':'♪ 音效：关';
+  s.classList.toggle('off',!S.sfxOn);
+}
+document.getElementById('bgmBtn').addEventListener('click',()=>{
+  S.bgmOn=!S.bgmOn;
+  const el=document.getElementById('bgmEl');
+  if(S.bgmOn){el.volume=0.45;el.play().catch(()=>{});}else{el.pause();}
+  refreshSndBtns();
+});
+document.getElementById('sfxBtn').addEventListener('click',()=>{
+  S.sfxOn=!S.sfxOn;
+  if(S.sfxOn)sfx('click');
+  refreshSndBtns();
+});
+refreshSndBtns();
+
+/* 缩放 / 平移：滚轮、按键、按钮、拖拽 */
+document.getElementById('zoomInBtn').addEventListener('click',()=>zoomStep(1.25));
+document.getElementById('zoomOutBtn').addEventListener('click',()=>zoomStep(1/1.25));
+document.getElementById('zoomResetBtn').addEventListener('click',resetView);
+cv.addEventListener('wheel',e=>{
+  e.preventDefault();
+  const rect=cv.getBoundingClientRect();
+  zoomAt(e.clientX-rect.left,e.clientY-rect.top,e.deltaY<0?1.18:1/1.18);
+},{passive:false});
+let dragInfo=null,didDrag=false;
+cv.addEventListener('mousedown',e=>{
+  if(e.button!==0&&e.button!==1)return;
+  dragInfo={sx:e.clientX,sy:e.clientY,px:panX,py:panY};didDrag=false;
+});
+window.addEventListener('mousemove',e=>{
+  if(!dragInfo)return;
+  const dx=e.clientX-dragInfo.sx,dy=e.clientY-dragInfo.sy;
+  if(Math.abs(dx)>5||Math.abs(dy)>5){
+    didDrag=true;cv.style.cursor='grabbing';
+    panX=dragInfo.px+dx;panY=dragInfo.py+dy;
+    computeCenters();
+  }
+});
+window.addEventListener('mouseup',()=>{dragInfo=null;cv.style.cursor='';});
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){closeTut();return;}
+  const tag=(e.target&&e.target.tagName)||'';
+  if(tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT')return;
+  if(e.key==='+'||e.key==='='){zoomStep(1.2);e.preventDefault();}
+  else if(e.key==='-'||e.key==='_'){zoomStep(1/1.2);e.preventDefault();}
+  else if(e.key==='0'){resetView();e.preventDefault();}
+  else if(e.key==='ArrowUp'||e.key==='w'||e.key==='W'){panY+=70;computeCenters();e.preventDefault();}
+  else if(e.key==='ArrowDown'||e.key==='s'||e.key==='S'){panY-=70;computeCenters();e.preventDefault();}
+  else if(e.key==='ArrowLeft'||e.key==='a'||e.key==='A'){panX+=70;computeCenters();e.preventDefault();}
+  else if(e.key==='ArrowRight'||e.key==='d'||e.key==='D'){panX-=70;computeCenters();e.preventDefault();}
+});
 
 function tileFromMouse(e){const rect=cv.getBoundingClientRect();const[col,row]=pixelToHexCoords(e.clientX-rect.left,e.clientY-rect.top);return tileAt(col,row);}
 cv.addEventListener('mousemove',e=>{
-  const t=tileFromMouse(e);const tip=document.getElementById('tooltip');
+  const tip=document.getElementById('tooltip');
+  if(dragInfo&&didDrag){tip.style.display='none';return;}
+  const t=tileFromMouse(e);
   if(!t){tip.style.display='none';hoverCity=null;return;}
   const city=t.cityId>=0&&CITIES[t.cityId]&&!CITIES[t.cityId].removed?CITIES[t.cityId]:null;hoverCity=city;
   const TT=TERRAIN_STATS[t.terrain]||TERRAIN_STATS.plain;const owner=t.owner?nationOf(t.owner):null;const inc=TILE_INCOME[t.terrain]||TILE_INCOME.plain;
@@ -1562,7 +1730,11 @@ cv.addEventListener('mousemove',e=>{
   tip.style.left=left+'px';tip.style.top=top+'px';
 });
 cv.addEventListener('mouseleave',()=>{document.getElementById('tooltip').style.display='none';hoverCity=null;});
-cv.addEventListener('click',e=>{if(S.mode==='editor'){editorClick(e);return;}const t=tileFromMouse(e);if(!t||t.cityId<0)return;const city=CITIES[t.cityId];if(city&&!city.removed)pickTarget(city);});
+cv.addEventListener('click',e=>{
+  if(didDrag){didDrag=false;return;}
+  if(S.mode==='editor'){editorClick(e);return;}
+  const t=tileFromMouse(e);if(!t||t.cityId<0)return;const city=CITIES[t.cityId];if(city&&!city.removed)pickTarget(city);
+});
 function boot(){
   sizeCanvas();initParticles();renderLegend();
   drawMap();
